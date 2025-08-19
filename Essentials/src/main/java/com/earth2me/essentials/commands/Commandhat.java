@@ -39,11 +39,6 @@ public class Commandhat extends EssentialsCommand {
                 return;
             }
 
-            if (hand.getType().getMaxDurability() != 0) {
-                user.sendTl("hatArmor");
-                return;
-            }
-
             final PlayerInventory inv = user.getBase().getInventory();
             final ItemStack head = inv.getHelmet();
             if (VersionUtil.getServerBukkitVersion().isHigherThan(VersionUtil.v1_9_4_R01) && head != null && head.getEnchantments().containsKey(Enchantment.BINDING_CURSE) && !user.isAuthorized("essentials.hat.ignore-binding")) {
