@@ -7,9 +7,10 @@ dependencyResolutionManagement {
                 includeGroup("net.md_5")
             }
         }
-        maven("https://jitpack.io") {
-            content { includeGroup("com.github.milkbowl") }
-            content { includeGroup("com.github.MinnDevelopment") }
+        maven("https://repo.essentialsx.net/releases") {
+            content {
+                includeGroup("net.essentialsx.deps")
+            }
         }
         maven("https://repo.codemc.org/repository/maven-public") {
             content { includeGroup("org.bstats") }
@@ -20,17 +21,16 @@ dependencyResolutionManagement {
         maven("https://libraries.minecraft.net/") {
             content { includeGroup("com.mojang") }
         }
-        mavenCentral {
-            content { includeGroup("net.dv8tion") }
-            content { includeGroup("net.kyori") }
-            content { includeGroup("org.apache.logging.log4j") }
-        }
     }
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 }
 
 pluginManagement {
     includeBuild("build-logic")
+}
+
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
 rootProject.name = "EssentialsXParent"

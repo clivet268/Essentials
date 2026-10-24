@@ -2,13 +2,12 @@ package com.earth2me.essentials.spawn;
 
 import com.earth2me.essentials.EssentialsLogger;
 import com.earth2me.essentials.metrics.MetricsWrapper;
-import com.earth2me.essentials.utils.AdventureUtil;
 import net.ess3.api.IEssentials;
+import net.essentialsx.api.v2.events.AsyncUserDataLoadEvent;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.event.EventPriority;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -29,7 +28,7 @@ public class EssentialsSpawn extends JavaPlugin implements IEssentialsSpawn {
         final PluginManager pluginManager = getServer().getPluginManager();
         ess = (IEssentials) pluginManager.getPlugin("Essentials");
         if (!this.getDescription().getVersion().equals(ess.getDescription().getVersion())) {
-            getLogger().log(Level.WARNING, AdventureUtil.miniToLegacy(tlLiteral("versionMismatchAll")));
+            getLogger().log(Level.WARNING, ess.getAdventureFacet().miniToLegacy(tlLiteral("versionMismatchAll")));
         }
         if (!ess.isEnabled()) {
             this.setEnabled(false);
@@ -49,8 +48,11 @@ public class EssentialsSpawn extends JavaPlugin implements IEssentialsSpawn {
 
         final EventPriority joinPriority = ess.getSettings().getSpawnJoinPriority();
         if (joinPriority != null) {
-            pluginManager.registerEvent(PlayerJoinEvent.class, playerListener, joinPriority, (ll, event) ->
-                ((EssentialsSpawnPlayerListener) ll).onPlayerJoin((PlayerJoinEvent) event), this);
+            // Listen on AsyncUserDataLoadEvent (fired after the core join flow) so we can reliably tell whether this is
+            // a player's first join, instead of using Player#hasPlayedBefore() which doesn't since data is persisted during the configuration phase.
+            // See https://github.com/EssentialsX/Essentials/issues/6466
+            pluginManager.registerEvent(AsyncUserDataLoadEvent.class, playerListener, joinPriority, (ll, event) ->
+                ((EssentialsSpawnPlayerListener) ll).onUserDataLoad((AsyncUserDataLoadEvent) event), this);
         }
 
         if (metrics == null) {

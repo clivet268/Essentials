@@ -37,22 +37,22 @@ public final class MaterialUtil {
 
     static {
         HELMETS = EnumUtil.getAllMatching(Material.class, "LEATHER_HELMET", "CHAINMAIL_HELMET", "IRON_HELMET",
-                "GOLD_HELMET", "GOLDEN_HELMET", "DIAMOND_HELMET", "NETHERITE_HELMET", "TURTLE_HELMET");
+                "GOLD_HELMET", "GOLDEN_HELMET", "DIAMOND_HELMET", "NETHERITE_HELMET", "TURTLE_HELMET", "COPPER_HELMET");
 
         CHESTPLATES = EnumUtil.getAllMatching(Material.class, "LEATHER_CHESTPLATE", "CHAINMAIL_CHESTPLATE",
                 "IRON_CHESTPLATE", "GOLD_CHESTPLATE", "GOLDEN_CHESTPLATE", "DIAMOND_CHESTPLATE", "NETHERITE_CHESTPLATE",
-                "ELYTRA");
+                "ELYTRA", "COPPER_CHESTPLATE");
 
         LEGGINGS = EnumUtil.getAllMatching(Material.class, "LEATHER_LEGGINGS", "CHAINMAIL_LEGGINGS",
-                "IRON_LEGGINGS", "GOLD_LEGGINGS", "GOLDEN_LEGGINGS", "DIAMOND_LEGGINGS", "NETHERITE_LEGGINGS");
+                "IRON_LEGGINGS", "GOLD_LEGGINGS", "GOLDEN_LEGGINGS", "DIAMOND_LEGGINGS", "NETHERITE_LEGGINGS", "COPPER_LEGGINGS");
 
         BOOTS = EnumUtil.getAllMatching(Material.class, "LEATHER_BOOTS", "CHAINMAIL_BOOTS", "IRON_BOOTS",
-                "GOLD_BOOTS", "GOLDEN_BOOTS", "DIAMOND_BOOTS", "NETHERITE_BOOTS");
+                "GOLD_BOOTS", "GOLDEN_BOOTS", "DIAMOND_BOOTS", "NETHERITE_BOOTS", "COPPER_BOOTS");
 
         BEDS = EnumUtil.getAllMatching(Material.class, "BED", "BED_BLOCK", "WHITE_BED", "ORANGE_BED",
             "MAGENTA_BED", "LIGHT_BLUE_BED", "YELLOW_BED", "LIME_BED", "PINK_BED", "GRAY_BED",
             "LIGHT_GRAY_BED", "CYAN_BED", "PURPLE_BED", "BLUE_BED", "BROWN_BED", "GREEN_BED",
-            "RED_BED", "BLACK_BED");
+            "RED_BED", "BLACK_BED", "STRAW_BED");
 
         BANNERS = EnumUtil.getAllMatching(Material.class, "BANNER", "WHITE_BANNER",
             "ORANGE_BANNER", "MAGENTA_BANNER", "LIGHT_BLUE_BANNER", "YELLOW_BANNER", "LIME_BANNER",
@@ -86,7 +86,8 @@ public final class MaterialUtil {
             "OAK_SIGN", "SPRUCE_SIGN",
             "CRIMSON_SIGN", "WARPED_SIGN",
             "MANGROVE_SIGN", "CHERRY_SIGN",
-            "BAMBOO_SIGN", "PALE_OAK_SIGN");
+            "BAMBOO_SIGN", "PALE_OAK_SIGN",
+            "POPLAR_SIGN");
 
         WALL_SIGNS = EnumUtil.getAllMatching(Material.class, "WALL_SIGN",
             "ACACIA_WALL_SIGN", "BIRCH_WALL_SIGN",
@@ -94,21 +95,24 @@ public final class MaterialUtil {
             "OAK_WALL_SIGN", "SPRUCE_WALL_SIGN",
             "CRIMSON_WALL_SIGN", "WARPED_WALL_SIGN",
             "MANGROVE_WALL_SIGN", "CHERRY_WALL_SIGN",
-            "BAMBOO_WALL_SIGN", "PALE_OAK_WALL_SIGN");
+            "BAMBOO_WALL_SIGN", "PALE_OAK_WALL_SIGN",
+            "POPLAR_WALL_SIGN");
 
         HANGING_SIGNS = EnumUtil.getAllMatching(Material.class, "ACACIA_HANGING_SIGN", "BIRCH_HANGING_SIGN",
             "DARK_OAK_HANGING_SIGN", "JUNGLE_HANGING_SIGN",
             "OAK_HANGING_SIGN", "SPRUCE_HANGING_SIGN",
             "CRIMSON_HANGING_SIGN", "WARPED_HANGING_SIGN",
             "MANGROVE_HANGING_SIGN", "CHERRY_HANGING_SIGN",
-            "BAMBOO_HANGING_SIGN", "PALE_OAK_HANGING_SIGN");
+            "BAMBOO_HANGING_SIGN", "PALE_OAK_HANGING_SIGN",
+            "POPLAR_HANGING_SIGN");
 
         HANGING_WALL_SIGNS = EnumUtil.getAllMatching(Material.class, "ACACIA_WALL_HANGING_SIGN", "BIRCH_WALL_HANGING_SIGN",
                 "DARK_OAK_WALL_HANGING_SIGN", "JUNGLE_WALL_HANGING_SIGN",
                 "OAK_WALL_HANGING_SIGN", "SPRUCE_WALL_HANGING_SIGN",
                 "CRIMSON_WALL_HANGING_SIGN", "WARPED_WALL_HANGING_SIGN",
                 "MANGROVE_WALL_HANGING_SIGN", "CHERRY_WALL_HANGING_SIGN",
-                "BAMBOO_WALL_HANGING_SIGN", "PALE_OAK_WALL_HANGING_SIGN");
+                "BAMBOO_WALL_HANGING_SIGN", "PALE_OAK_WALL_HANGING_SIGN",
+                "POPLAR_WALL_HANGING_SIGN");
     }
 
     private MaterialUtil() {
@@ -128,6 +132,10 @@ public final class MaterialUtil {
 
     public static boolean isBoots(final Material material) {
         return BOOTS.contains(material);
+    }
+
+    public static boolean isArmor(final Material material) {
+        return isHelmet(material) || isChestplate(material) || isLeggings(material) || isBoots(material);
     }
 
     public static boolean isBed(final Material material) {

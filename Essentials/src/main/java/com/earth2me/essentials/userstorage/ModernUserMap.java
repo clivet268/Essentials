@@ -65,6 +65,21 @@ public class ModernUserMap extends CacheLoader<UUID, User> implements IUserMap {
     }
 
     @Override
+    public boolean isCached(final UUID uuid) {
+        if (uuid == null) {
+            return false;
+        }
+        try {
+            return userCache.getIfPresent(uuid) != null;
+        } catch (Exception e) {
+            if (ess.getSettings().isDebug()) {
+                ess.getLogger().log(Level.WARNING, "Exception while checking if user is cached for " + uuid, e);
+            }
+            return false;
+        }
+    }
+
+    @Override
     public int getUserCount() {
         return uuidCache.getCacheSize();
     }
@@ -87,6 +102,13 @@ public class ModernUserMap extends CacheLoader<UUID, User> implements IUserMap {
 
     @Override
     public User getUser(final Player base) {
+        final UUID uuid = base.getUniqueId();
+        final User cachedUser = userCache.getIfPresent(uuid);
+        if (cachedUser != null && cachedUser.getBase() == base) {
+            uuidCache.updateCache(uuid, base.getName());
+            return cachedUser;
+        }
+
         final User user = loadUncachedUser(base);
         userCache.put(user.getUUID(), user);
         debugLogCache(user);
@@ -213,6 +235,9 @@ public class ModernUserMap extends CacheLoader<UUID, User> implements IUserMap {
     public void invalidate(final UUID uuid) {
         userCache.invalidate(uuid);
         uuidCache.removeCache(uuid);
+    }
+
+    public void removeCache(final UUID uuid) {
         onlineUserCache.remove(uuid);
     }
 

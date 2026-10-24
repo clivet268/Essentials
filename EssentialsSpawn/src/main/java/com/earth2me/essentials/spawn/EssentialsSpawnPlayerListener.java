@@ -7,10 +7,10 @@ import com.earth2me.essentials.textreader.IText;
 import com.earth2me.essentials.textreader.KeywordReplacer;
 import com.earth2me.essentials.utils.VersionUtil;
 import net.ess3.api.IEssentials;
+import net.essentialsx.api.v2.events.AsyncUserDataLoadEvent;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
@@ -49,9 +49,9 @@ class EssentialsSpawnPlayerListener implements Listener {
                     (!VersionUtil.getServerBukkitVersion().isHigherThanOrEqualTo(VersionUtil.v1_16_1_R01) ||
                     (!event.isAnchorSpawn() || ess.getSettings().isRespawnAtAnchor()))) {
                 // cannot nuke this sync load due to the event being sync so it would hand either way
-                if(VersionUtil.getServerBukkitVersion().isHigherThanOrEqualTo(VersionUtil.v1_16_1_R01)) {
+                if(VersionUtil.getServerBukkitVersion().isHigherThanOrEqualTo(VersionUtil.v1_20_4_R01)) {
                     respawnLocation = user.getBase().getRespawnLocation();
-                } else { // For versions prior to 1.16.
+                } else { // For versions prior to 1.20.4.
                     respawnLocation = user.getBase().getBedSpawnLocation();
                 }
             }
@@ -76,12 +76,14 @@ class EssentialsSpawnPlayerListener implements Listener {
         }
     }
 
-    void onPlayerJoin(final PlayerJoinEvent event) {
-        ess.runTaskAsynchronously(() -> delayedJoin(event.getPlayer()));
+    void onUserDataLoad(final AsyncUserDataLoadEvent event) {
+        // AsyncUserDataLoadEvent is already fired asynchronously, after EssentialsX has determined whether this is a
+        // first join, so we can jump straight into the join handling without racing the core join flow.
+        delayedJoin(event.getUser().getBase(), event.isFirstJoin());
     }
 
-    private void delayedJoin(final Player player) {
-        if (player.hasPlayedBefore()) {
+    private void delayedJoin(final Player player, final boolean firstJoin) {
+        if (!firstJoin) {
             logger.log(Level.FINE, "Old player join");
             final List<String> spawnOnJoinGroups = ess.getSettings().getSpawnOnJoinGroups();
             if (!spawnOnJoinGroups.isEmpty()) {

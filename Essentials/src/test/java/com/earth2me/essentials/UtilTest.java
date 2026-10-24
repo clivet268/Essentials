@@ -3,6 +3,12 @@ package com.earth2me.essentials;
 import com.earth2me.essentials.utils.DateUtil;
 import com.earth2me.essentials.utils.LocationUtil;
 import com.earth2me.essentials.utils.VersionUtil;
+import net.ess3.provider.WorldInfoProvider;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.WorldBorder;
+import org.bukkit.block.Block;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,10 +17,16 @@ import org.mockbukkit.mockbukkit.MockBukkit;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class UtilTest {
 
@@ -25,6 +37,7 @@ public class UtilTest {
         MockBukkit.mock();
         Essentials.TESTING = true;
         ess = MockBukkit.load(Essentials.class);
+        ess.getI18n().updateLocale(Locale.ENGLISH.toLanguageTag());
     }
 
     @AfterEach
@@ -60,6 +73,52 @@ public class UtilTest {
         assertEquals(testSet.size(), count);
         final int diameter = LocationUtil.RADIUS * 2 + 1;
         assertEquals(diameter * diameter * diameter, count);
+    }
+
+    @Test
+    public void testSafeLocationRespectsLogicalHeight() throws Exception {
+        final Location result = getSafeDestinationWithLogicalHeightSetting(true);
+
+        assertEquals(1, result.getBlockX());
+        assertEquals(100, result.getBlockY());
+    }
+
+    @Test
+    public void testSafeLocationIgnoresLogicalHeightWhenDisabled() throws Exception {
+        final Location result = getSafeDestinationWithLogicalHeightSetting(false);
+
+        assertEquals(0, result.getBlockX());
+        assertEquals(128, result.getBlockY());
+    }
+
+    private Location getSafeDestinationWithLogicalHeightSetting(final boolean considerWorldHeight) throws Exception {
+        final IEssentials essentials = mock(IEssentials.class);
+        final ISettings settings = mock(ISettings.class);
+        final WorldInfoProvider worldInfoProvider = mock(WorldInfoProvider.class);
+        final World world = mock(World.class);
+        final WorldBorder worldBorder = mock(WorldBorder.class);
+        final Block solid = mock(Block.class);
+        final Block hollow = mock(Block.class);
+
+        when(essentials.provider(WorldInfoProvider.class)).thenReturn(worldInfoProvider);
+        when(essentials.getSettings()).thenReturn(settings);
+        when(settings.isConsiderWorldHeightForTeleportSafety()).thenReturn(considerWorldHeight);
+        when(worldInfoProvider.getMinHeight(world)).thenReturn(0);
+        when(worldInfoProvider.getLogicalHeight(world)).thenReturn(128);
+        when(worldInfoProvider.getMaxHeight(world)).thenReturn(256);
+        when(world.getWorldBorder()).thenReturn(worldBorder);
+        when(worldBorder.getCenter()).thenReturn(new Location(world, 0, 0, 0));
+        when(worldBorder.getSize()).thenReturn(60_000_000D);
+        when(solid.getType()).thenReturn(Material.BEDROCK);
+        when(hollow.getType()).thenReturn(Material.LIGHT);
+        when(world.getBlockAt(anyInt(), anyInt(), anyInt())).thenAnswer(invocation -> {
+            final int x = invocation.getArgument(0);
+            final int y = invocation.getArgument(1);
+            final int z = invocation.getArgument(2);
+            return y >= 128 || x == 1 && z == 0 && (y == 100 || y == 101) ? hollow : solid;
+        });
+
+        return LocationUtil.getSafeDestination(essentials, new Location(world, 0, 64, 0));
     }
 
     @Test
@@ -247,5 +306,211 @@ public class UtilTest {
         assertEquals(v.getRevision(), 0.1);
         assertEquals(v.getPrerelease(), -1);
         assertEquals(v.getReleaseCandidate(), 3);
+        // New versioning format (26.x)
+        v = VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT");
+        assertEquals(v.getMajor(), 26);
+        assertEquals(v.getMinor(), 1);
+        assertEquals(v.getPatch(), 0);
+        assertEquals(v.getRevision(), 0.1);
+        assertEquals(v.getSnapshotRelease(), -1);
+        assertEquals(v.getPrerelease(), -1);
+        assertEquals(v.getReleaseCandidate(), -1);
+        v = VersionUtil.BukkitVersion.fromString("26.1.1-R0.1-SNAPSHOT");
+        assertEquals(v.getMajor(), 26);
+        assertEquals(v.getMinor(), 1);
+        assertEquals(v.getPatch(), 1);
+        assertEquals(v.getRevision(), 0.1);
+        assertEquals(v.getSnapshotRelease(), -1);
+        assertEquals(v.getPrerelease(), -1);
+        assertEquals(v.getReleaseCandidate(), -1);
+        v = VersionUtil.BukkitVersion.fromString("26.1-snapshot-11-R0.1-SNAPSHOT");
+        assertEquals(v.getMajor(), 26);
+        assertEquals(v.getMinor(), 1);
+        assertEquals(v.getPatch(), 0);
+        assertEquals(v.getRevision(), 0.1);
+        assertEquals(v.getSnapshotRelease(), 11);
+        assertEquals(v.getPrerelease(), -1);
+        assertEquals(v.getReleaseCandidate(), -1);
+        v = VersionUtil.BukkitVersion.fromString("26.1-pre-3-R0.1-SNAPSHOT");
+        assertEquals(v.getMajor(), 26);
+        assertEquals(v.getMinor(), 1);
+        assertEquals(v.getPatch(), 0);
+        assertEquals(v.getRevision(), 0.1);
+        assertEquals(v.getSnapshotRelease(), -1);
+        assertEquals(v.getPrerelease(), 3);
+        assertEquals(v.getReleaseCandidate(), -1);
+        v = VersionUtil.BukkitVersion.fromString("26.1-rc-2-R0.1-SNAPSHOT");
+        assertEquals(v.getMajor(), 26);
+        assertEquals(v.getMinor(), 1);
+        assertEquals(v.getPatch(), 0);
+        assertEquals(v.getRevision(), 0.1);
+        assertEquals(v.getSnapshotRelease(), -1);
+        assertEquals(v.getPrerelease(), -1);
+        assertEquals(v.getReleaseCandidate(), 2);
+        // Old format versions are always lower than new format versions
+        assertTrue(VersionUtil.BukkitVersion.fromString("1.21.11-R0.1-SNAPSHOT")
+            .isLowerThan(VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT")
+            .isHigherThan(VersionUtil.BukkitVersion.fromString("1.21.11-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("1.21.11-R0.1-SNAPSHOT")
+            .isLowerThan(VersionUtil.BukkitVersion.fromString("26.1-snapshot-1-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("1.21.11-R0.1-SNAPSHOT")
+            .isLowerThan(VersionUtil.BukkitVersion.fromString("26.1-pre-1-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("1.21.11-R0.1-SNAPSHOT")
+            .isLowerThan(VersionUtil.BukkitVersion.fromString("26.1-rc-1-R0.1-SNAPSHOT")));
+        // Base release is higher than dev variants: snapshot < pre < rc < release
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT")
+            .isHigherThan(VersionUtil.BukkitVersion.fromString("26.1-snapshot-1-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT")
+            .isHigherThan(VersionUtil.BukkitVersion.fromString("26.1-pre-1-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT")
+            .isHigherThan(VersionUtil.BukkitVersion.fromString("26.1-rc-1-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-rc-1-R0.1-SNAPSHOT")
+            .isHigherThan(VersionUtil.BukkitVersion.fromString("26.1-pre-1-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-pre-1-R0.1-SNAPSHOT")
+            .isHigherThan(VersionUtil.BukkitVersion.fromString("26.1-snapshot-1-R0.1-SNAPSHOT")));
+        // Dev variants of 26.1 are lower than 26.2
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-snapshot-99-R0.1-SNAPSHOT")
+            .isLowerThan(VersionUtil.BukkitVersion.fromString("26.2-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-pre-99-R0.1-SNAPSHOT")
+            .isLowerThan(VersionUtil.BukkitVersion.fromString("26.2-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-rc-99-R0.1-SNAPSHOT")
+            .isLowerThan(VersionUtil.BukkitVersion.fromString("26.2-R0.1-SNAPSHOT")));
+        // equalsBaseVersion: dev variants match their base version
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-snapshot-11-R0.1-SNAPSHOT")
+            .equalsBaseVersion(VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-pre-3-R0.1-SNAPSHOT")
+            .equalsBaseVersion(VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-rc-2-R0.1-SNAPSHOT")
+            .equalsBaseVersion(VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT")));
+        // equalsBaseVersion: different minor versions don't match
+        assertFalse(VersionUtil.BukkitVersion.fromString("26.2-snapshot-1-R0.1-SNAPSHOT")
+            .equalsBaseVersion(VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT")));
+        // equalsBaseVersion: different patch versions don't match
+        assertFalse(VersionUtil.BukkitVersion.fromString("26.1.1-R0.1-SNAPSHOT")
+            .equalsBaseVersion(VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT")));
+        // toString roundtrip with new PaperMC format
+        assertEquals("26.1-snapshot-11-R0.1",
+            VersionUtil.BukkitVersion.fromString("26.1-snapshot-11-R0.1-SNAPSHOT").toString());
+        assertEquals("26.1-pre-3-R0.1",
+            VersionUtil.BukkitVersion.fromString("26.1-pre-3-R0.1-SNAPSHOT").toString());
+        assertEquals("26.1-rc-2-R0.1",
+            VersionUtil.BukkitVersion.fromString("26.1-rc-2-R0.1-SNAPSHOT").toString());
+        // Paper build metadata format (e.g. 26.1-rc-3.build.8-alpha)
+        // Paper versions do NOT include -R0.1-SNAPSHOT suffix
+        v = VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.8-alpha");
+        assertEquals(v.getMajor(), 26);
+        assertEquals(v.getMinor(), 1);
+        assertEquals(v.getPatch(), 0);
+        assertEquals(v.getRevision(), 0.0);
+        assertEquals(v.getSnapshotRelease(), -1);
+        assertEquals(v.getPrerelease(), -1);
+        assertEquals(v.getReleaseCandidate(), 3);
+        assertEquals(v.getPaperBuild(), 8);
+        assertEquals(v.getReleaseChannel(), "alpha");
+        v = VersionUtil.BukkitVersion.fromString("26.1-pre-3.build.5-alpha");
+        assertEquals(v.getMajor(), 26);
+        assertEquals(v.getMinor(), 1);
+        assertEquals(v.getPatch(), 0);
+        assertEquals(v.getRevision(), 0.0);
+        assertEquals(v.getSnapshotRelease(), -1);
+        assertEquals(v.getPrerelease(), 3);
+        assertEquals(v.getReleaseCandidate(), -1);
+        assertEquals(v.getPaperBuild(), 5);
+        assertEquals(v.getReleaseChannel(), "alpha");
+        v = VersionUtil.BukkitVersion.fromString("26.1-snapshot-11.build.3-alpha");
+        assertEquals(v.getMajor(), 26);
+        assertEquals(v.getMinor(), 1);
+        assertEquals(v.getPatch(), 0);
+        assertEquals(v.getRevision(), 0.0);
+        assertEquals(v.getSnapshotRelease(), 11);
+        assertEquals(v.getPrerelease(), -1);
+        assertEquals(v.getReleaseCandidate(), -1);
+        assertEquals(v.getPaperBuild(), 3);
+        assertEquals(v.getReleaseChannel(), "alpha");
+        // Paper build of a base release (no Mojang specifier)
+        v = VersionUtil.BukkitVersion.fromString("26.1.build.5-alpha");
+        assertEquals(v.getMajor(), 26);
+        assertEquals(v.getMinor(), 1);
+        assertEquals(v.getPatch(), 0);
+        assertEquals(v.getRevision(), 0.0);
+        assertEquals(v.getSnapshotRelease(), -1);
+        assertEquals(v.getPrerelease(), -1);
+        assertEquals(v.getReleaseCandidate(), -1);
+        assertEquals(v.getPaperBuild(), 5);
+        assertEquals(v.getReleaseChannel(), "alpha");
+        // Paper builds with same Mojang version: equalsBaseVersion matches
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.8-alpha")
+            .equalsBaseVersion(VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1.build.5-alpha")
+            .equalsBaseVersion(VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1")
+            .equalsBaseVersion(VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT")));
+        // Paper build ordering: higher build number is higher
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.12-alpha")
+            .isHigherThan(VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.8-alpha")));
+        // Paper build is higher than bare Mojang version (paperBuild -1 < 1)
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.1-alpha")
+            .isHigherThan(VersionUtil.BukkitVersion.fromString("26.1-rc-3-R0.1-SNAPSHOT")));
+        // Paper versions: ordering still works against Bukkit versions
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.8-alpha")
+            .isHigherThan(VersionUtil.BukkitVersion.fromString("1.21.11-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("1.21.11-R0.1-SNAPSHOT")
+            .isLowerThan(VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.8-alpha")));
+        // Release channel: different channels parsed correctly
+        v = VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.8-beta");
+        assertEquals(v.getReleaseCandidate(), 3);
+        assertEquals(v.getPaperBuild(), 8);
+        assertEquals(v.getReleaseChannel(), "beta");
+        v = VersionUtil.BukkitVersion.fromString("26.1.build.10-recommended");
+        assertEquals(v.getMajor(), 26);
+        assertEquals(v.getMinor(), 1);
+        assertEquals(v.getPatch(), 0);
+        assertEquals(v.getPaperBuild(), 10);
+        assertEquals(v.getReleaseChannel(), "recommended");
+        // Release channel: Bukkit/Mojang versions have no release channel
+        assertNull(VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT").getReleaseChannel());
+        assertNull(VersionUtil.BukkitVersion.fromString("26.1-rc-3-R0.1-SNAPSHOT").getReleaseChannel());
+        assertNull(VersionUtil.BukkitVersion.fromString("1.21.11-R0.1-SNAPSHOT").getReleaseChannel());
+        // Release channel: Paper build without channel suffix
+        v = VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.8");
+        assertEquals(v.getPaperBuild(), 8);
+        assertNull(v.getReleaseChannel());
+        // toString roundtrip preserves release channel
+        assertEquals("26.1-rc-3.build.8-alpha-R0.0",
+            VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.8-alpha").toString());
+        assertEquals("26.1.build.5-recommended-R0.0",
+            VersionUtil.BukkitVersion.fromString("26.1.build.5-recommended").toString());
+        assertEquals("26.1-pre-1.build.3-beta-R0.0",
+            VersionUtil.BukkitVersion.fromString("26.1-pre-1.build.3-beta").toString());
+        assertEquals("26.1-snapshot-11.build.3-alpha-R0.0",
+            VersionUtil.BukkitVersion.fromString("26.1-snapshot-11.build.3-alpha").toString());
+        // toString: paper build without channel omits channel suffix
+        assertEquals("26.1-rc-3.build.8-R0.0",
+            VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.8").toString());
+        // Release channel does not affect equalsBaseVersion
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.8-alpha")
+            .equalsBaseVersion(VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.8-beta")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1.build.5-recommended")
+            .equalsBaseVersion(VersionUtil.BukkitVersion.fromString("26.1.build.5-alpha")));
+        // Paper build metadata does not affect equality
+        assertEquals(VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.8-alpha"),
+            VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.12-beta"));
+        assertEquals(VersionUtil.BukkitVersion.fromString("26.1.build.5-alpha"),
+            VersionUtil.BukkitVersion.fromString("26.1.build.99-recommended"));
+        assertEquals(VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.8-alpha"),
+            VersionUtil.BukkitVersion.fromString("26.1-rc-3-R0.0"));
+        // Patch release with Paper build does not match different patch via equalsBaseVersion
+        assertFalse(VersionUtil.BukkitVersion.fromString("26.1.1.build.14-alpha")
+            .equalsBaseVersion(VersionUtil.BukkitVersion.fromString("26.1-R0.1-SNAPSHOT")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1.1.build.14-alpha")
+            .equalsBaseVersion(VersionUtil.BukkitVersion.fromString("26.1.1-R0.1-SNAPSHOT")));
+        // Base release paper build is higher than rc/pre/snapshot paper builds
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1.build.5-alpha")
+            .isHigherThan(VersionUtil.BukkitVersion.fromString("26.1-rc-3.build.8-alpha")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1.build.1-alpha")
+            .isHigherThan(VersionUtil.BukkitVersion.fromString("26.1-pre-1.build.99-alpha")));
+        assertTrue(VersionUtil.BukkitVersion.fromString("26.1.build.1-alpha")
+            .isHigherThan(VersionUtil.BukkitVersion.fromString("26.1-snapshot-99.build.99-alpha")));
     }
 }
